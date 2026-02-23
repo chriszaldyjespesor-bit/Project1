@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enterprise SOAP SIS - Persistent Sessions</title>
+    <style>
+        :root { 
+            --primary: #2c3e50; --accent: #3498db; --success: #27ae60; 
+            --error: #e74c3c; --bg: #f8fafc;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--primary); }
+        .wrapper { max-width: 950px; margin: 0 auto; }
+        
+        /* Navigation & Session Info */
+        .nav-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .tabs { display: flex; gap: 5px; }
+        .tab { 
+            padding: 12px 20px; background: #e2e8f0; border-radius: 8px 8px 0 0; 
+            cursor: pointer; font-weight: bold; border: none; transition: 0.3s;
+        }
+        .tab.active { background: white; border-bottom: 3px solid var(--accent); color: var(--accent); box-shadow: 0 -5px 10px rgba(0,0,0,0.05); }
+        .tab.disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .session-info { font-size: 0.85em; background: #fff; padding: 5px 15px; border-radius: 20px; border: 1px solid #ddd; display: none; }
+        .btn-logout { background: var(--error); color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; margin-left: 10px; font-size: 0.8em; }
+
+        /* View Containers */
+        .view { display: none; background: white; padding: 30px; border-radius: 0 10px 10px 10px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .view.active { display: block; animation: slideIn 0.3s ease-out; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Form Styling */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        button.main-btn { width: 100%; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1em; margin-top: 10px; }
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-green { background: var(--success); color: white; }
+
+        /* XML & Audit */
+        .xml-box { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.8em; white-space: pre-wrap; height: 120px; overflow-y: auto; border: 1px solid #333; margin-top: 5px; }
+        .audit-container { margin-top: 25px; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th { text-align: left; padding: 10px; border-bottom: 2px solid #f1f5f9; }
+        td { padding: 10px; border-bottom: 1px solid #f1f5f9; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <header style="text-align: center; margin-bottom: 20px;">
+        <h1>Secure SOAP Student SIS</h1>
+        <p>Persistent Account Storage & Session Management</p>
+    </header>
+
+    <div class="nav-container">
+        <div class="tabs">
+            <button id="tab-reg" class="tab active" onclick="switchView('reg')">Register</button>
+            <button id="tab-login" class="tab" onclick="switchView('login')">Login</button>
+            <button id="tab-service" class="tab disabled" onclick="switchView('service')">Student Service</button>
+        </div>
+        <div id="session-box" class="session-info">
+            User: <strong id="user-display"></strong>
+            <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+        </div>
+    </div>
+
+    <div id="view-reg" class="view active">
+        <h3>Account Registration</h3>
+        <p>REGISTER</p>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="reg-u" placeholder="AdminUser">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="reg-p" placeholder="••••••••">
+        </div>
+        <button class="main-btn btn-blue" onclick="doRegister()">Create & Save Account</button>
+    </div>
+
+    <div id="view-login" class="view">
+        <h3>Security Challenge</h3>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="log-u">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="log-p">
+        </div>
+        <button class="main-btn btn-blue" onclick="doLogin()">Authenticate SOAP Session</button>
+    </div>
+
+    <div id="view-service" class="view">
+        <h3>Student Information  Section()</h3>
+        <div class="form-group">
+            <label>Target Student ID</label>
+            <select id="student-id">
+                <option value="101">Alice (ID: 101)</option>
+                <option value="102">Bob (ID: 102)</option>
+                <option value="103">Mady (ID: 103)</option>
+                <option value="104">Kem (ID: 104)</option>
+                <option value="105">Nethan (ID: 105)</option>
+                <option value="106">Aron (ID: 106)</option>
+                <option value="107">Mico (ID: 107)</option>
+            </select>
+        </div>
+        <button class="main-btn btn-green" onclick="doServiceCall()">Send SOAP Request</button>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+            <div><small>Request (XML Header + Body)</small><div id="xml-req" class="xml-box">---</div></div>
+            <div><small>Response (XML Server Payload)</small><div id="xml-res" class="xml-box">---</div></div>
+        </div>
+    </div>
+
+    <div class="audit-container">
+        <h3 style="margin-top:0">Audit Logs (JSON Data Stream)</h3>
+        <table>
+            <thead><tr><th>Time</th><th>Principal</th><th>Operation</th><th>Status</th></tr></thead>
+            <tbody id="audit-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // --- PERSISTENT JSON DB LOGIC ---
+    // This mimics saving/loading from a students.json file
+    let userDb = JSON.parse(localStorage.getItem('soap_users')) || [];
+    let sessionUser = null;
+
+    const studentDb = { "101": "Alice Smith | GPA: 3.9", "102": "Bob Jones | GPA: 3.4", "103": "Mady Espesor | GPA: 3.4", "104": "Kem Ab | GPA: 3.4", "105": "Nethan En | GPA: 3.4", "106": "Aron Cap | GPA: 3.4", "107": "Mico Car | GPA: 3.4" };
+
+    function saveUsers() {
+        localStorage.setItem('soap_users', JSON.stringify(userDb));
+    }
+
+    // --- NAVIGATION ---
+    function switchView(viewName) {
+        if(viewName === 'service' && !sessionUser) {
+            alert("Access Denied: Session Inactive."); return;
+        }
+        document.querySelectorAll('.view, .tab').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-' + viewName).classList.add('active');
+        document.getElementById('tab-' + viewName).classList.add('active');
+    }
+
+    // --- LOGIC: REGISTER ---
+    function doRegister() {
+        const u = document.getElementById('reg-u').value;
+        const p = document.getElementById('reg-p').value;
+        if(!u || !p) return alert("Fields required");
+        
+        userDb.push({ u, p });
+        saveUsers(); // Save to "JSON DB"
+        log("System", `Registration: ${u}`, "SUCCESS");
+        alert("Account saved to JSON. Please Login.");
+        switchView('login');
+    }
+
+    // --- LOGIC: LOGIN ---
+    function doLogin() {
+        const u = document.getElementById('log-u').value;
+        const p = document.getElementById('log-p').value;
+        const user = userDb.find(x => x.u === u && x.p === p);
+
+        if(user) {
+            sessionUser = user;
+            document.getElementById('user-display').innerText = u;
+            document.getElementById('session-box').style.display = 'block';
+            document.getElementById('tab-service').classList.remove('disabled');
+            log(u, "Session Established", "SUCCESS");
+            switchView('service');
+        } else {
+            log(u || "Unknown", "Auth Failed", "ERROR");
+            alert("Invalid credentials.");
+        }
+    }
+
+    // --- LOGIC: SIGN OUT ---
+    function doLogout() {
+        log(sessionUser.u, "Session Terminated", "SUCCESS");
+        sessionUser = null;
+        document.getElementById('session-box').style.display = 'none';
+        document.getElementById('tab-service').classList.add('disabled');
+        document.getElementById('xml-req').innerText = "---";
+        document.getElementById('xml-res').innerText = "---";
+        alert("Logged out. Session cleared.");
+        switchView('login');
+    }
+
+    // --- LOGIC: SERVICE CALL ---
+    function doServiceCall() {
+        const id = document.getElementById('student-id').value;
+        const req = `<soap:Envelope>\n <soap:Header>\n  <AuthToken>${btoa(sessionUser.u)}</AuthToken>\n </soap:Header>\n <soap:Body>\n  <GetRecord id="${id}"/>\n </soap:Body>\n</soap:Envelope>`;
+        document.getElementById('xml-req').innerText = req;
+
+        let res = "";
+        let status = "SUCCESS";
+        if(studentDb[id]) {
+            res = `<soap:Envelope>\n <soap:Body>\n  <Data>${studentDb[id]}</Data>\n </soap:Body>\n</soap:Envelope>`;
+        } else {
+            res = `<soap:Envelope>\n <soap:Body>\n  <soap:Fault>ID Not Found</soap:Fault>\n </soap:Body>\n</soap:Envelope>`;
+            status = "ERROR";
+        }
+        document.getElementById('xml-res').innerText = res;
+        log(sessionUser.u, `Fetch ID: ${id}`, status);
+    }
+
+    function log(user, action, status) {
+        const row = `<tr><td>${new Date().toLocaleTimeString()}</td><td>${user}</td><td>${action}</td><td>${status}</td></tr>`;
+        document.getElementById('audit-body').innerHTML = row + document.getElementById('audit-body').innerHTML;
+    }
+</script>
+</body>
+</html>
